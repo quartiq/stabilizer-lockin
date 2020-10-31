@@ -68,7 +68,8 @@ impl TimeStamp {
 /// reference clock edges.
 /// * `r` - Number of valid timestamps in `t`.
 /// * `phi` - Demodulation phase offset. This phase shifts the
-/// demodulation signal.
+/// demodulation signal. This is applied after the frequency scaling
+/// factor multiplies the reference frequency.
 /// * `ffast` - Fast clock frequency (Hz). The fast clock increments
 /// timestamp counter values used to record the edges of the external
 /// reference.
