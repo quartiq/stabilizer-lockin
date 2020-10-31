@@ -147,8 +147,12 @@ fn lp_iir_ba(fc: f64, fs: f64) -> [f32; 5] {
 /// value. Setting `reference` to the full scale value gives a full
 /// scale uncertainty. Setting `reference` to `act` uses a percentage
 /// accuracy.
-fn tol_check(act: f32, res: f32, reference: f32, tol: f32) -> bool {
-    ((act - res) / reference).abs() < tol
+fn tol_check(act: f32, res: f32, fixed_tol: f32, rel_tol: f32) -> bool {
+    (act - res).abs() < max_error(act, fixed_tol, rel_tol)
+}
+
+fn max_error(act: f32, fixed_tol: f32, rel_tol: f32) -> f32 {
+    rel_tol * act.abs() + fixed_tol
 }
 
 fn lp_test<const N: usize, const M: usize, const K: usize>(
@@ -170,8 +174,30 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let extra_samples = (tau * fadc) as usize;
 
     let in_dbfs: f64 = desired_input.amp_dbfs;
-    let in_linear: f64 = dbfs_to_linear(in_dbfs);
+    let in_a: f64 = dbfs_to_linear(in_dbfs);
     let in_phi: f64 = desired_input.phi;
+    let mut in_a_noise: f64 = 0.;
+    let mut in_phi_noise: f64 = 0.;
+
+    for noise_input in noise_inputs.iter() {
+        // Noise inputs create an oscillation at the output, where the
+        // oscillation magnitude is determined by the strength of the
+        // noise and its attenuation (attenuation is determined by its
+        // proximity to the demodulation frequency and filter rolloff)
+        let octaves = ((noise_input.freq - (fref * fscale as f64)).abs() / fc).log2();
+        let attenuation = -12. * octaves;
+        let noise_lin = dbfs_to_linear(noise_input.amp_dbfs + attenuation);
+        in_a_noise += noise_lin;
+        // Noise affects the phase output by creating oscillations to
+        // I and Q, which affects atan2(Q, I).
+        // TODO I'm not so sure about this...
+        let phi_err = {
+            let i = in_a / 2. * in_phi.cos();
+            let q = in_a / 2. * in_phi.sin();
+            ((q + noise_lin).atan2(i - noise_lin) - q.atan2(i)).abs()
+        };
+        in_phi_noise += phi_err;
+    }
 
     let pure_sigs = noise_inputs;
     pure_sigs.push(desired_input);
@@ -199,7 +225,7 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
         TimeStamp { count: 0, sequences_old: -1 }
     ];
 
-    let in_linear: f32 = in_linear as f32;
+    let in_a: f32 = in_a as f32;
     let in_phi: f32 = in_phi as f32;
 
     for n in 0..(n_samples + extra_samples) {
@@ -239,21 +265,20 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
             for k in 0..K {
                 let a_norm: f32 = a[k] / ADC_MAX_COUNTS as f32;
                 assert!(
-                    tol_check(in_linear, a_norm, ADC_MAX as f32, tol),
-                    // tol_check(in_linear, alast, in_linear, tol),
-                    "a_in: {:.4} ({:.2} dBFS), a_last: {:.4} ({:.2} dBFS), %_diff_fs: {:.4}",
-                    in_linear,
+                    tol_check(in_a, a_norm, in_a_noise as f32, tol),
+                    "a_act: {:.4} ({:.2} dBFS), a_meas: {:.4} ({:.2} dBFS), tol: {:.4}",
+                    in_a,
                     in_dbfs,
                     a_norm,
                     linear_to_dbfs(a_norm as f64),
-                    100. * (in_linear - a_norm) / ADC_MAX as f32
+                    max_error(in_a, in_a_noise as f32, tol)
                 );
                 assert!(
-                    tol_check(in_phi, t[k], 2. * PI as f32, tol),
-                    "t_in: {:.4}, t_last: {:.4}, %_diff_fs: {:.4}",
+                    tol_check(in_phi, t[k], in_phi_noise as f32, tol),
+                    "t_act: {:.4}, t_meas: {:.4}, tol: {:.4}",
                     in_phi,
                     t[k],
-                    100. * (in_phi - t[k]) / (2. * PI as f32)
+                    max_error(in_phi, in_phi_noise as f32, tol)
                 );
             }
         }
@@ -323,12 +348,12 @@ fn lp_fundamental_sideband_noise_phi_pi_2() {
         },
         &mut vec![
             PureSine {
-                freq: 1.2 * fdemod,
+                freq: 1.1 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
             PureSine {
-                freq: 0.8 * fdemod,
+                freq: 0.9 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
@@ -440,12 +465,12 @@ fn lp_fundamental_111e3_sideband_noise_phi_pi_4() {
         },
         &mut vec![
             PureSine {
-                freq: 1.2 * fdemod,
+                freq: 1.1 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
             PureSine {
-                freq: 0.8 * fdemod,
+                freq: 0.9 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
@@ -713,7 +738,7 @@ fn lp_low_t() {
         },
         &mut vec![
             PureSine {
-                freq: 10. * fdemod,
+                freq: 2. * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             }
