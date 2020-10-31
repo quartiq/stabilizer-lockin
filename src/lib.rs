@@ -40,6 +40,10 @@ impl TimeStamp {
     /// Set a new count value for TimeStamp. This also changes
     /// `sequences_old` to 0 to indicate the TimeStamp belongs to the
     /// current processing sequence.
+    ///
+    /// # Arguments
+    ///
+    /// * `newval` - New count value.
     pub fn new_count(&mut self, newval: u16) {
         self.count = newval;
         self.sequences_old = 0;
