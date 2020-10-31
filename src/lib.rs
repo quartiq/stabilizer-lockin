@@ -372,8 +372,7 @@ fn increment_tstamp_sequence(tstamps: &mut [TimeStamp; 2]) {
 /// * `phase_offset` - Phase offset (in radians) to add to the real
 /// phase result.
 fn real_phase(theta_count: u16, period_count: f32, phase_offset: f32) -> f32 {
-    let norm = ((theta_count as f32 / period_count) + phase_offset) % 1.;
-    2. * PI * norm
+    (2. * PI * (theta_count as f32 / period_count) + phase_offset) % (2. * PI)
 }
 
 /// Filter in-phase and quadrature signals with the IIR biquad filter.
