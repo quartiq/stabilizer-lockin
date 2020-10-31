@@ -1,0 +1,4 @@
+/target
+Cargo.lock
+/src/atan_table.txt
+/src/sin_table.txt
