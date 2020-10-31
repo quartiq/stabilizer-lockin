@@ -34,12 +34,12 @@ fn linear_to_dbfs(linear: f64) -> f64 {
 }
 
 /// Frequency (in Hz) to period in terms of the fast clock period.
-fn freq_to_tcounts(freq: f64, ffast: f64) -> u16 {
-    (ffast / freq) as u16
+fn freq_to_tcounts(freq: f64, ffast: f64) -> f64 {
+    ffast / freq
 }
 
-fn adc_counts(fadc: f64, ffast: f64) -> u16 {
-    (ffast / fadc) as u16
+fn adc_counts(fadc: f64, ffast: f64) -> f64 {
+    ffast / fadc
 }
 
 fn real_to_adc_sample(x: f64) -> i16 {
@@ -76,12 +76,12 @@ fn input_signal<const N: usize>(
 
     for elem in pure_sigs.iter() {
         let elem_period = freq_to_tcounts(elem.freq, ffast);
-        let phi_counts = (elem.phi / (2. * PI) * elem_period as f64) as u16;
-        let theta_start_counts = (phi_counts + (tstart % elem_period as u64) as u16) % elem_period;
+        let phi_counts = elem.phi / (2. * PI) * elem_period;
+        let theta_start_counts = (phi_counts + tstart as f64) % elem_period;
 
         amplitudes.push(dbfs_to_linear(elem.amp_dbfs));
-        theta_starts.push(2. * PI * theta_start_counts as f64 / elem_period as f64);
-        theta_incs.push(2. * PI * adc_counts(fadc, ffast) as f64 / elem_period as f64);
+        theta_starts.push(2. * PI * theta_start_counts / elem_period);
+        theta_incs.push(2. * PI * adc_counts(fadc, ffast) / elem_period);
     }
 
     for n in 0..N {
@@ -105,17 +105,15 @@ fn tstamps<const M: usize>(
     ffast: f64,
 ) -> (usize, [u16; M]) {
     // counts in one reference period
-    let tref: u64 = (ffast / fref) as u64;
-    let phi_counts: u64 = ((phi / (2. * PI)) * (ffast / fref)) as u64;
-    let start_counts: u64 = ((tstart % tref) + phi_counts) % tref;
-    let mut tval: u64 = (tref - start_counts) % tref;
-    let tdist: u16 = (tstop - tstart) as u16;
+    let tref = ffast / fref;
+    let phi_counts = (phi / (2. * PI)) * tref;
+    let start_counts = (tstart as f64 + phi_counts) % tref;
+    let mut tval = (tref - start_counts) % tref;
+    let tdist: f64 = (tstop - tstart) as f64;
     let mut r: usize = 0;
     let mut t: [u16; M] = [0; M];
 
-    // println!("{}", tdist);
-    // println!("{}", tref);
-    while tval < tdist as u64 {
+    while tval < tdist {
         t[r] = tval as u16;
         tval += tref;
         r += 1;
@@ -124,6 +122,8 @@ fn tstamps<const M: usize>(
     (r, t)
 }
 
+/// Lowpass biquad filter using cutoff and sampling frequencies.
+/// Taken from: https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
 fn lp_iir_ba(fc: f64, fs: f64) -> [f32; 5] {
     let w0: f64 = 2. * PI * fc / fs;
     let q: f64 = 1. / 2f64.sqrt();
@@ -323,12 +323,12 @@ fn lp_fundamental_sideband_noise_phi_pi_2() {
         },
         &mut vec![
             PureSine {
-                freq: 1.1 * fdemod,
+                freq: 1.2 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
             PureSine {
-                freq: 0.9 * fdemod,
+                freq: 0.8 * fdemod,
                 amp_dbfs: -20.,
                 phi: 0.,
             },
@@ -494,10 +494,6 @@ fn lp_first_harmonic_sideband_noise() {
     )
 }
 
-// TODO this fails with the phase oscillating. I think it's because
-// fscale doesn't cleanly divide the number of counts corresponding to
-// tsig. I think this may require using f32 for the demodulation
-// period. I'm currently getting away with u16.
 #[test]
 fn lp_second_harmonic_sideband_noise() {
     let ffast: f64 = 100e6;
