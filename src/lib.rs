@@ -303,13 +303,12 @@ fn adc_phases<const N: usize>(
     tadc: u16,
 ) -> [f32; N] {
     let overflow_count: u16 = tadc * N as u16;
-    let tr_unscaled: u16 = tstamps_diff(tstamps, overflow_count);
-    let tr: u16 = tr_unscaled / fscale;
+    let tref_count: u16 = tstamps_diff(tstamps, overflow_count);
     let mut thetas: [f32; N] = [0.; N];
     let mut theta_count: u16;
 
     if tstamps[0].sequences_old == 0 {
-        theta_count = (tr_unscaled - first_t) % tr;
+        theta_count = (tref_count - first_t) % tref_count;
     } else {
         theta_count = tstamps_diff(
             &[
@@ -320,13 +319,14 @@ fn adc_phases<const N: usize>(
                 tstamps[0],
             ],
             overflow_count,
-        ) % tr;
+        ) % tref_count;
     }
 
-    thetas[0] = real_phase(theta_count, tr, phi);
+    let tdemod_count: f32 = tref_count as f32 / fscale as f32;
+    thetas[0] = real_phase(theta_count, tdemod_count, phi);
     for i in 1..N {
         theta_count += tadc;
-        thetas[i] = real_phase(theta_count, tr, phi);
+        thetas[i] = real_phase(theta_count, tdemod_count, phi);
     }
 
     thetas
@@ -371,8 +371,9 @@ fn increment_tstamp_sequence(tstamps: &mut [TimeStamp; 2]) {
 /// * `period_count` - Number of counts in 1 period.
 /// * `phase_offset` - Phase offset (in radians) to add to the real
 /// phase result.
-fn real_phase(theta_count: u16, period_count: u16, phase_offset: f32) -> f32 {
-    (2. * PI * theta_count as f32 / period_count as f32 + phase_offset) % (2. * PI)
+fn real_phase(theta_count: u16, period_count: f32, phase_offset: f32) -> f32 {
+    let norm = ((theta_count as f32 / period_count) + phase_offset) % 1.;
+    2. * PI * norm
 }
 
 /// Filter in-phase and quadrature signals with the IIR biquad filter.
