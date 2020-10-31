@@ -166,6 +166,8 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
 
     let tau: f64 = 1. / (2. * PI * fc);
     let n_samples = (tau_factor * tau * fadc) as usize;
+    // Ensure stability after `tau_factor` time constants.
+    let extra_samples = (tau * fadc) as usize;
 
     let in_dbfs: f64 = desired_input.amp_dbfs;
     let in_linear: f64 = dbfs_to_linear(in_dbfs);
@@ -192,15 +194,15 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     //     Ok(file) => file,
     // };
 
-    let mut alast: f32 = 0.;
-    let mut tlast: f32 = 0.;
-
     let mut timestamps = [
         TimeStamp { count: 0, sequences_old: -1 },
         TimeStamp { count: 0, sequences_old: -1 }
     ];
 
-    for n in 0..n_samples {
+    let in_linear: f32 = in_linear as f32;
+    let in_phi: f32 = in_phi as f32;
+
+    for n in 0..(n_samples + extra_samples) {
         let tstart: u64 = n as u64 * sample_counts;
         let sig: [i16; N] = input_signal::<N>(&pure_sigs, tstart, ffast, fadc);
         let (r, ts) = tstamps::<M>(fref, 0., tstart, tstart + sample_counts - 1, ffast);
@@ -217,9 +219,28 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
             &mut timestamps,
         );
 
-        if n == n_samples - 1 {
-            alast = a[K - 1] / ADC_MAX_COUNTS as f32;
-            tlast = t[K - 1];
+        // Ensure stable below tolerance for 1 time constant after `tau_factor`.
+        if n >= n_samples {
+            for k in 0..K {
+                let a_norm: f32 = a[k] / ADC_MAX_COUNTS as f32;
+                assert!(
+                    tol_check(in_linear, a_norm, ADC_MAX as f32, tol),
+                    // tol_check(in_linear, alast, in_linear, tol),
+                    "a_in: {:.4} ({:.2} dBFS), a_last: {:.4} ({:.2} dBFS), %_diff_fs: {:.4}",
+                    in_linear,
+                    in_dbfs,
+                    a_norm,
+                    linear_to_dbfs(a_norm as f64),
+                    100. * (in_linear - a_norm) / ADC_MAX as f32
+                );
+                assert!(
+                    tol_check(in_phi, t[k], 2. * PI as f32, tol),
+                    "t_in: {:.4}, t_last: {:.4}, %_diff_fs: {:.4}",
+                    in_phi,
+                    t[k],
+                    100. * (in_phi - t[k]) / (2. * PI as f32)
+                );
+            }
         }
 
         // for k in 0..K as usize {
@@ -230,26 +251,6 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
         //     }
         // }
     }
-
-    let in_linear: f32 = in_linear as f32;
-    let in_phi: f32 = in_phi as f32;
-
-    assert!(
-        tol_check(in_linear, alast, ADC_MAX as f32, tol),
-        "a_in: {:.4} ({:.2} dBFS), a_last: {:.4} ({:.2} dBFS), %_diff: {:.4}",
-        in_linear,
-        in_dbfs,
-        alast,
-        linear_to_dbfs(alast as f64),
-        100. * (in_linear - alast) / ADC_MAX as f32
-    );
-    assert!(
-        tol_check(in_phi, tlast, 2. * PI as f32, tol),
-        "t_in: {:.4}, t_last: {:.4}, %_diff: {:.4}",
-        in_phi,
-        tlast,
-        100. * (in_phi - tlast) / (2. * PI as f32)
-    );
 }
 
 #[test]
