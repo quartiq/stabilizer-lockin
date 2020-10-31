@@ -282,6 +282,10 @@ fn iq_to_t_map<const K: usize>(i: [f32; K], q: [f32; K]) -> [f32; K] {
 
 /// Demodulation phase values corresponding to each ADC sample.
 ///
+/// # Generics
+///
+/// * `N` - Number of ADC samples.
+///
 /// # Arguments
 ///
 /// * `first_t` - First timestamp value from the current processing
