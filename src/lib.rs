@@ -616,4 +616,23 @@ mod tests {
         assert_eq!(tstamps[0].sequences_old, 1);
         assert_eq!(tstamps[1].sequences_old, -1);
     }
+
+    #[test]
+    fn tstamps_valid_count_test() {
+        for (valid_num, old1, old2) in [(0, -1, -1), (1, 1, -1), (1, -1, 1), (2, 1, 1)].iter() {
+            assert_eq!(
+                tstamps_valid_count(&[
+                    TimeStamp {
+                        count: 5,
+                        sequences_old: *old1 as i16,
+                    },
+                    TimeStamp {
+                        count: 0,
+                        sequences_old: *old2 as i16,
+                    }
+                ]),
+                *valid_num as usize
+            );
+        }
+    }
 }
