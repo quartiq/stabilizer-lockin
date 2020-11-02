@@ -68,8 +68,8 @@ pub fn cos_map<const N: usize>(thetas: [f32; N]) -> [f32; N] {
 /// * `y` - Y coordinate value. Can be any real value.
 /// * `x` - X coordinate value. Can be any real value.
 pub fn atan2(y: f32, x: f32) -> f32 {
-    // TODO technically this is undefined, but the rust standard
-    // library defines it this way.
+    // I believe atan2(0,0) is technically undefined, not =0, but the
+    // rust standard library defines it this way.
     if x == 0. && y == 0. {
         return 0.;
     }
