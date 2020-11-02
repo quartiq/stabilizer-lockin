@@ -644,10 +644,72 @@ mod tests {
     }
 
     #[test]
+    fn record_new_tstamps_m4_r1() {
+        let mut tstamps = [
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+        ];
+        record_new_tstamps::<4>([1, 0, 0, 0], 1, &mut tstamps);
+        assert_eq!(tstamps[0].count, 1);
+        assert_eq!(tstamps[0].sequences_old, 0);
+        assert_eq!(tstamps[1].count, 0);
+        assert_eq!(tstamps[1].sequences_old, -1);
+    }
+
+    #[test]
+    fn record_new_tstamps_m4_r2() {
+        let mut tstamps = [
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+        ];
+        record_new_tstamps::<4>([1, 2, 0, 0], 2, &mut tstamps);
+        assert_eq!(tstamps[0].count, 2);
+        assert_eq!(tstamps[0].sequences_old, 0);
+        assert_eq!(tstamps[1].count, 1);
+        assert_eq!(tstamps[1].sequences_old, 0);
+    }
+
+    #[test]
+    fn record_new_tstamps_m4_r3() {
+        let mut tstamps = [
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+        ];
+        record_new_tstamps::<4>([1, 2, 3, 0], 3, &mut tstamps);
+        assert_eq!(tstamps[0].count, 3);
+        assert_eq!(tstamps[0].sequences_old, 0);
+        assert_eq!(tstamps[1].count, 2);
+        assert_eq!(tstamps[1].sequences_old, 0);
+    }
+
+    #[test]
     fn iq_to_a_test() {
         assert!(f32_is_close(iq_to_a(1. / 2f32.sqrt(), 1. / 2f32.sqrt()), 2.));
         assert!(f32_is_close(iq_to_a(0.1, 1.6), 3.20624390838));
         assert!(f32_is_close(iq_to_a(-0.1, 1.6), 3.20624390838));
         assert!(f32_is_close(iq_to_a(0.1, -1.6), 3.20624390838));
     }
+
+    // TODO iq_to_a_map
+    // TODO iq_to_t_map
+    // TODO tstamps_diff
+    // TODO demod
 }
