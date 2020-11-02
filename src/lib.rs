@@ -33,6 +33,7 @@ impl TimeStamp {
     }
 
     /// Returns true if TimeStamp is valid.
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.sequences_old != -1
     }
@@ -44,6 +45,7 @@ impl TimeStamp {
     /// # Arguments
     ///
     /// * `newval` - New count value.
+    #[inline]
     pub fn new_count(&mut self, newval: u16) {
         self.count = newval;
         self.sequences_old = 0;
@@ -198,6 +200,7 @@ pub fn postfilt_at<const N: usize, const M: usize, const K: usize>(
 /// reference.
 /// * `fadc` - ADC sampling frequency (in Hz).
 /// * `n` - Number of ADC samples in each processing block.
+#[inline]
 pub fn arr(ffast: u32, fadc: u32, n: u16) -> u16 {
     tadc(ffast, fadc) * n
 }
@@ -238,6 +241,7 @@ fn record_new_tstamps<const M: usize>(t: [u16; M], r: usize, tstamps_mem: &mut [
 ///
 /// * `ffast` - Fast clock frequency.
 /// * `fadc` - ADC sampling frequency.
+#[inline]
 fn tadc(ffast: u32, fadc: u32) -> u16 {
     (ffast / fadc) as u16
 }
@@ -257,6 +261,7 @@ fn iq_to_a_map<const K: usize>(i: [f32; K], q: [f32; K]) -> [f32; K] {
 ///
 /// `i` - In-phase signal.
 /// `q` - Quadrature signal.
+#[inline]
 fn iq_to_a(i: f32, q: f32) -> f32 {
     2. * sqrt(pow2(i) + pow2(q))
 }
@@ -267,6 +272,7 @@ fn iq_to_a(i: f32, q: f32) -> f32 {
 ///
 /// `i` - In-phase signal.
 /// `q` - Quadrature signal.
+#[inline]
 fn iq_to_t(i: f32, q: f32) -> f32 {
     atan2(q, i)
 }
@@ -463,10 +469,12 @@ fn demod<const N: usize>(x: [i16; N], sines: [f32; N], cosines: [f32; N]) -> ([f
     (i, q)
 }
 
+#[inline]
 fn sqrt(x: f32) -> f32 {
     unsafe { intrinsics::sqrtf32(x) }
 }
 
+#[inline]
 fn pow2(x: f32) -> f32 {
     x * x
 }
