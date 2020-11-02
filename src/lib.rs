@@ -710,6 +710,69 @@ mod tests {
 
     // TODO iq_to_a_map
     // TODO iq_to_t_map
-    // TODO tstamps_diff
+
+    #[test]
+    fn tstamps_diff_ofcount_1000() {
+        let overflow_count: u16 = 1000;
+        // same sequence
+        let tstamps = [
+            TimeStamp {
+                count: 126,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 33,
+                sequences_old: 0,
+            },
+        ];
+        assert_eq!(tstamps_diff(&tstamps, overflow_count), 93);
+        // adjacent sequences
+        let tstamps = [
+            TimeStamp {
+                count: 9,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 33,
+                sequences_old: 1,
+            },
+        ];
+        assert_eq!(tstamps_diff(&tstamps, overflow_count), 976);
+        let tstamps = [
+            TimeStamp {
+                count: 35,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 33,
+                sequences_old: 1,
+            },
+        ];
+        assert_eq!(tstamps_diff(&tstamps, overflow_count), 1002);
+        // non-adjacent sequences
+        let tstamps = [
+            TimeStamp {
+                count: 9,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 33,
+                sequences_old: 2,
+            },
+        ];
+        assert_eq!(tstamps_diff(&tstamps, overflow_count), 1976);
+        let tstamps = [
+            TimeStamp {
+                count: 35,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 33,
+                sequences_old: 2,
+            },
+        ];
+        assert_eq!(tstamps_diff(&tstamps, overflow_count), 2002);
+    }
+
     // TODO demod
 }
