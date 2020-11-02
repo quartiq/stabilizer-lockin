@@ -457,14 +457,13 @@ fn decimate<const N: usize, const K: usize>(i: [f32; N], q: [f32; N]) -> ([f32; 
 /// * `sines` - Reference sine signal.
 /// * `cosines` - Reference cosine signal.
 fn demod<const N: usize>(x: [i16; N], sines: [f32; N], cosines: [f32; N]) -> ([f32; N], [f32; N]) {
-    let mut xf: [f32; N] = [0.; N];
     let mut i: [f32; N] = [0.; N];
     let mut q: [f32; N] = [0.; N];
 
     for n in 0..N {
-        xf[n] = x[n] as f32;
-        i[n] = xf[n] * sines[n];
-        q[n] = xf[n] * cosines[n];
+        let xf_n: f32 = x[n] as f32;
+        i[n] = xf_n * sines[n];
+        q[n] = xf_n * cosines[n];
     }
     (i, q)
 }
