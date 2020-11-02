@@ -635,4 +635,11 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn tadc_test() {
+        assert_eq!(tadc(100_000_000, 500_000), 200);
+        assert_eq!(tadc(125_000_000, 500_000), 250);
+        assert_eq!(tadc(100_000_000, 300_000), 333);
+    }
 }
