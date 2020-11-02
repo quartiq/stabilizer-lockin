@@ -599,4 +599,21 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn increment_tstamp_sequence_valid_invalid() {
+        let mut tstamps = [
+            TimeStamp {
+                count: 0,
+                sequences_old: 0,
+            },
+            TimeStamp {
+                count: 0,
+                sequences_old: -1,
+            },
+        ];
+        increment_tstamp_sequence(&mut tstamps);
+        assert_eq!(tstamps[0].sequences_old, 1);
+        assert_eq!(tstamps[1].sequences_old, -1);
+    }
 }
