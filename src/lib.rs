@@ -501,7 +501,7 @@ mod tests {
     }
 
     fn f32_is_close(a: f32, b: f32) -> bool {
-        abs(a - b) <= (max(a, b) * f32::EPSILON)
+        abs(a - b) <= (max(a.abs(), b.abs()) * f32::EPSILON)
     }
 
     #[test]
@@ -708,9 +708,6 @@ mod tests {
         assert!(f32_is_close(iq_to_a(0.1, -1.6), 3.20624390838));
     }
 
-    // TODO iq_to_a_map
-    // TODO iq_to_t_map
-
     #[test]
     fn tstamps_diff_ofcount_1000() {
         let overflow_count: u16 = 1000;
@@ -774,5 +771,16 @@ mod tests {
         assert_eq!(tstamps_diff(&tstamps, overflow_count), 2002);
     }
 
-    // TODO demod
+    #[test]
+    fn demod_n4() {
+        const N: usize = 4;
+        let x: [i16; N] = [-1, 0, 1, -18];
+        let sines: [f32; N] = [0.1, -0.3, 18.76, -33.1];
+        let cosines: [f32; N] = [-0.2389, 0.1823, 0.123, -0.5839];
+        let (i, q) = demod::<N>(x, sines, cosines);
+        for n in 0..N {
+            assert!(f32_is_close(i[n], x[n] as f32 * sines[n]));
+            assert!(f32_is_close(q[n], x[n] as f32 * cosines[n]));
+        }
+    }
 }
