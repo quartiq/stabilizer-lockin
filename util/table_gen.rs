@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 const TABLE_N: usize = 1000;
 
 fn construct_table(fname: String, xvals: [f32; TABLE_N], tr: fn(f32) -> f32) {
-    let path = Path::new("src").join(fname);
+    let path = Path::new("../src").join(fname);
     let display = path.display();
 
     let mut file = match File::create(&path) {
@@ -26,14 +26,6 @@ fn construct_table(fname: String, xvals: [f32; TABLE_N], tr: fn(f32) -> f32) {
             Ok(_) => (),
         }
     }
-    // let delta: f32 = PI / 2.0 / (TABLE_N-1) as f32;
-    // for i in 0..TABLE_N {
-    //     let s = format!("  {:.34},\n", (delta * i as f32).sin());
-    //     match file.write_all(s.as_bytes()) {
-    //         Err(why) => panic!("failed to write to {}: {}", display, why),
-    //         Ok(_) => (),
-    //     }
-    // }
 
     match file.write_all("]\n".as_bytes()) {
         Err(why) => panic!("failed to write to {}: {}", display, why),
@@ -57,29 +49,4 @@ fn main() {
         atan_xvals[i] = atan_delta * i as f32;
     }
     construct_table(atan_fname, atan_xvals, f32::atan);
-
-    // let display = path.display();
-
-    // let mut file = match File::create(&path) {
-    //     Err(why) => panic!("failed to write to {}: {}", display, why),
-    //     Ok(file) => file,
-    // };
-
-    // match file.write_all("[\n".as_bytes()) {
-    //     Err(why) => panic!("failed to write to {}: {}", display, why),
-    //     Ok(_) => (),
-    // }
-
-    // for i in 0..TABLE_N {
-    //     let s = format!("  {:.34},\n", (delta * i as f32).sin());
-    //     match file.write_all(s.as_bytes()) {
-    //         Err(why) => panic!("failed to write to {}: {}", display, why),
-    //         Ok(_) => (),
-    //     }
-    // }
-
-    // match file.write_all("]\n".as_bytes()) {
-    //     Err(why) => panic!("failed to write to {}: {}", display, why),
-    //     Ok(_) => (),
-    // }
 }
