@@ -329,10 +329,11 @@ fn adc_phases<const N: usize>(
     }
 
     let tdemod_count: f32 = tref_count as f32 / fscale as f32;
+    let phi_count: f32 = phi / (2. * PI) * tdemod_count;
     thetas[0] = real_phase(theta_count, tdemod_count, phi);
     for i in 1..N {
         theta_count += tadc;
-        thetas[i] = real_phase(theta_count, tdemod_count, phi);
+        thetas[i] = real_phase(theta_count, tdemod_count, phi_count);
     }
 
     thetas
@@ -375,10 +376,10 @@ fn increment_tstamp_sequence(tstamps: &mut [TimeStamp; 2]) {
 /// * `theta_count` - Phase in counts. This can be greater than the
 /// period in counts.
 /// * `period_count` - Number of counts in 1 period.
-/// * `phase_offset` - Phase offset (in radians) to add to the real
-/// phase result.
-fn real_phase(theta_count: u16, period_count: f32, phase_offset: f32) -> f32 {
-    (2. * PI * (theta_count as f32 / period_count) + phase_offset) % (2. * PI)
+/// * `phase_count` - Phase offset. In the same units as `period_count`.
+fn real_phase(theta_count: u16, period_count: f32, phase_count: f32) -> f32 {
+    let total_angle = (theta_count as f32 + phase_count) % period_count;
+    2. * PI * (total_angle / period_count)
 }
 
 /// Filter in-phase and quadrature signals with the IIR biquad filter.
@@ -483,6 +484,26 @@ extern crate std;
 mod tests {
     use super::*;
 
+    fn abs(x: f32) -> f32 {
+        if x >= 0. {
+            x
+        } else {
+            -x
+        }
+    }
+
+    fn max(x: f32, y: f32) -> f32 {
+        if x > y {
+            x
+        } else {
+            y
+        }
+    }
+
+    fn f32_is_close(a: f32, b: f32) -> bool {
+        abs(a - b) <= (max(a, b) * f32::EPSILON)
+    }
+
     #[test]
     fn arr_n_16_ffast_1e6_fadc_5e5() {
         let ffast: u32 = 100_000_000;
@@ -510,5 +531,55 @@ mod tests {
         let i_in: [f32; 8] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
         let q_in: [f32; 8] = [0.9, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16];
         assert!(decimate::<8, 4>(i_in, q_in) == ([0.1, 0.3, 0.5, 0.7], [0.9, 0.11, 0.13, 0.15]));
+    }
+
+    #[test]
+    fn real_phase_per_1000_phi_0() {
+        let period_count: f32 = 1000.;
+        let phi: f32 = 0.;
+        // PI/4 increments
+        assert!(f32_is_close(real_phase(0, period_count, phi), 0.));
+        assert!(f32_is_close(real_phase(125, period_count, phi), PI / 4.));
+        assert!(f32_is_close(real_phase(250, period_count, phi), PI / 2.));
+        assert!(f32_is_close(
+            real_phase(375, period_count, phi),
+            3. * PI / 4.
+        ));
+        assert!(f32_is_close(real_phase(500, period_count, phi), PI));
+        assert!(f32_is_close(
+            real_phase(625, period_count, phi),
+            5. * PI / 4.
+        ));
+        assert!(f32_is_close(
+            real_phase(750, period_count, phi),
+            3. * PI / 2.
+        ));
+        assert!(f32_is_close(
+            real_phase(875, period_count, phi),
+            7. * PI / 4.
+        ));
+        assert!(f32_is_close(real_phase(1000, period_count, phi), 0.));
+        // other, < 1000
+        assert!(f32_is_close(
+            real_phase(1, period_count, phi),
+            6.28318530718e-3
+        ));
+        assert!(f32_is_close(
+            real_phase(7, period_count, phi),
+            0.0439822971503
+        ));
+        assert!(f32_is_close(
+            real_phase(763, period_count, phi),
+            4.79407038938
+        ));
+        // > 1000
+        for angle_count in 0..period_count as usize - 1 {
+            for p in 0..3 {
+                assert!(f32_is_close(
+                    real_phase((angle_count as f32 + p as f32 * period_count) as u16, period_count, phi),
+                    real_phase(angle_count as u16, period_count, phi)
+                ));
+            }
+        }
     }
 }
