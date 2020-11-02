@@ -642,4 +642,12 @@ mod tests {
         assert_eq!(tadc(125_000_000, 500_000), 250);
         assert_eq!(tadc(100_000_000, 300_000), 333);
     }
+
+    #[test]
+    fn iq_to_a_test() {
+        assert!(f32_is_close(iq_to_a(1. / 2f32.sqrt(), 1. / 2f32.sqrt()), 2.));
+        assert!(f32_is_close(iq_to_a(0.1, 1.6), 3.20624390838));
+        assert!(f32_is_close(iq_to_a(-0.1, 1.6), 3.20624390838));
+        assert!(f32_is_close(iq_to_a(0.1, -1.6), 3.20624390838));
+    }
 }
