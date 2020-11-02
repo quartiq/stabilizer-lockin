@@ -576,9 +576,26 @@ mod tests {
         for angle_count in 0..period_count as usize - 1 {
             for p in 0..3 {
                 assert!(f32_is_close(
-                    real_phase((angle_count as f32 + p as f32 * period_count) as u16, period_count, phi),
+                    real_phase(
+                        (angle_count as f32 + p as f32 * period_count) as u16,
+                        period_count,
+                        phi
+                    ),
                     real_phase(angle_count as u16, period_count, phi)
                 ));
+            }
+        }
+    }
+
+    #[test]
+    fn real_phase_per_1000_phi_adjust() {
+        let period_count: f32 = 1000.;
+        for theta in [0, 20, 611, 987].iter() {
+            for phi in 0..period_count as usize - 1 {
+                assert!(f32_is_close(
+                    real_phase(*theta, period_count, phi as f32),
+                    real_phase(*theta + phi as u16, period_count, 0.)
+                ))
             }
         }
     }
