@@ -45,7 +45,7 @@ pub fn sin_map<const N: usize>(thetas: [f32; N]) -> [f32; N] {
 /// [0,2*PI).
 pub fn cos(theta: f32) -> f32 {
     let mut theta = theta + (PI / 2.);
-    if theta > 2. * PI {
+    if theta >= 2. * PI {
         theta -= 2. * PI;
     }
     sin(theta)
@@ -134,6 +134,11 @@ fn restrict_ratio(ratio: f32) -> (f32, bool, f32) {
 ///
 /// * `theta` - The angle in the range [0, 2*pi) to be restricted.
 fn restrict_angle(theta: f32) -> (f32, f32) {
+    #[cfg(debug_assertions)]
+    if theta < 0. || theta >= 2. * PI {
+        panic!("theta must be between 0 (inclusive) and 2pi (exclusive)");
+    }
+
     if theta < PI / 2. {
         return (1., theta);
     } else if theta < PI {
