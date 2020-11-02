@@ -167,6 +167,7 @@ fn lin_interp(pos: f32, lval: f32, uval: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use super::*;
 
     #[test]

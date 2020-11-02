@@ -480,8 +480,8 @@ fn pow2(x: f32) -> f32 {
 }
 
 #[cfg(test)]
-extern crate std;
 mod tests {
+    extern crate std;
     use super::*;
 
     fn abs(x: f32) -> f32 {
