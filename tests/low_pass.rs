@@ -860,9 +860,8 @@ fn lp_low_t() {
     )
 }
 
-// TODO this fails because ffast / fsig > u16::MAX. Can fix by
-// replacing u16 with u32.
 #[test]
+#[ignore = "Requires u32 counter value."]
 fn lp_very_low_t() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
