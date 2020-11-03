@@ -473,7 +473,7 @@ fn demod<const N: usize>(x: [i16; N], sines: [f32; N], cosines: [f32; N]) -> ([f
 
 #[inline]
 fn sqrt(x: f32) -> f32 {
-    unsafe { intrinsics::sqrtf32(x) }
+    libm::sqrtf(x)
 }
 
 #[inline]
