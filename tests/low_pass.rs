@@ -3,11 +3,6 @@
 extern crate stabilizer_lockin;
 extern crate std;
 
-// // TODO remove
-// use std::fs::File;
-// use std::io::prelude::*;
-// use std::path::Path;
-
 use std::f64::consts::PI;
 use std::vec::Vec;
 
@@ -321,14 +316,6 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let iirs: [IIR; 2] = [iir, iir];
     let mut iir_states: [IIRState; 2] = [[0.; 5], [0.; 5]];
 
-    // let path = Path::new("log.txt");
-    // let display = path.display();
-
-    // let mut file = match File::create(&path) {
-    //     Err(why) => panic!("failed to write to {}: {}", display, why),
-    //     Ok(file) => file,
-    // };
-
     let mut timestamps = [
         TimeStamp {
             count: 0,
@@ -359,21 +346,6 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
             &mut iir_states,
             &mut timestamps,
         );
-
-        // if n == n_samples {
-        //     match file.write_all("\npost tau_factor\n\n".as_bytes()) {
-        //         Err(why) => panic!("failed to write to {}: {}", display, why),
-        //         Ok(_) => (),
-        //     }
-        // }
-
-        // for k in 0..K as usize {
-        //     let s_str = format!("{:.6}\t{:.6}\n", linear_to_dbfs(a[k] as f64 / ADC_MAX_COUNTS as f64), t[k]);
-        //     match file.write_all(s_str.as_bytes()) {
-        //         Err(why) => panic!("failed to write to {}: {}", display, why),
-        //         Ok(_) => (),
-        //     }
-        // }
 
         // Ensure stable below tolerance for 1 time constant after `tau_factor`.
         if n >= n_samples {
