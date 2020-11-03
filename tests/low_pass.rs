@@ -373,7 +373,7 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
 }
 
 #[test]
-fn lp_fundamental_sideband_noise_phi_0() {
+fn lp_fundamental_noise_phi_0() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 100e3;
@@ -412,7 +412,7 @@ fn lp_fundamental_sideband_noise_phi_0() {
 }
 
 #[test]
-fn lp_fundamental_sideband_noise_phi_pi_2() {
+fn lp_fundamental_noise_phi_pi_2() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 100e3;
@@ -451,7 +451,7 @@ fn lp_fundamental_sideband_noise_phi_pi_2() {
 }
 
 #[test]
-fn lp_fundamental_sideband_noise_k_4() {
+fn lp_fundamental_noise_k_4() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 100e3;
@@ -490,7 +490,7 @@ fn lp_fundamental_sideband_noise_k_4() {
 }
 
 #[test]
-fn lp_fundamental_sideband_noise_no_downsample() {
+fn lp_fundamental_noise_no_downsample() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 100e3;
@@ -529,7 +529,7 @@ fn lp_fundamental_sideband_noise_no_downsample() {
 }
 
 #[test]
-fn lp_fundamental_111e3_sideband_noise_phi_pi_4() {
+fn lp_fundamental_111e3_noise_phi_pi_4() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 111e3;
@@ -568,7 +568,7 @@ fn lp_fundamental_111e3_sideband_noise_phi_pi_4() {
 }
 
 #[test]
-fn lp_first_harmonic_sideband_noise() {
+fn lp_first_harmonic_noise() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 50e3;
@@ -607,7 +607,7 @@ fn lp_first_harmonic_sideband_noise() {
 }
 
 #[test]
-fn lp_second_harmonic_sideband_noise() {
+fn lp_second_harmonic_noise() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 50e3;
@@ -646,7 +646,7 @@ fn lp_second_harmonic_sideband_noise() {
 }
 
 #[test]
-fn lp_third_harmonic_sideband_noise() {
+fn lp_third_harmonic_noise() {
     let ffast: f64 = 100e6;
     let fadc: f64 = 500e3;
     let fsig: f64 = 50e3;
