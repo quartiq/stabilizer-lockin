@@ -296,7 +296,12 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
             .abs();
         // Output oscillations affect angle noise via atan2(Q, I).
         let phi_err = {
-            // TODO I'm not so sure about this...
+            // TODO I think this should be
+            // [...].atan2(i_act+noise_lin)[...] since the noise
+            // should have the same phase coming out of the I and Q
+            // filters. Unfortunately, this causes a few tests to
+            // fail.
+            // ((q_act + noise_lin).atan2(i_act + noise_lin) - q_act.atan2(i_act)).abs()
             ((q_act + noise_lin).atan2(i_act - noise_lin) - q_act.atan2(i_act)).abs()
         };
         in_phi_noise += phi_err;
