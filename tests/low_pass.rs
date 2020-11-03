@@ -17,31 +17,60 @@ use stabilizer_lockin::{postfilt_at, TimeStamp};
 const ADC_MAX: f64 = 1.;
 const ADC_MAX_COUNTS: f64 = i16::MAX as f64;
 
-// 16-bit ADC has a min dBFS for each sample of -90.
+/// Pure sinusoid with a given frequency (in Hz), amplitude (in dBFS)
+/// and phase offset.
 struct PureSine {
     freq: f64,
+    // 16-bit ADC has a min dBFS for each sample of -90.
     amp_dbfs: f64,
     phi: f64,
 }
 
+/// Convert a dBFS voltage ratio to a linear ratio.
+///
+/// # Arguments
+///
+/// * `dbfs` - dB ratio relative to full scale.
 fn dbfs_to_linear(dbfs: f64) -> f64 {
     let base = 10.0_f64;
     ADC_MAX * base.powf(dbfs / 20.)
 }
 
+/// Convert a linear voltage ratio to a dBFS ratio.
+///
+/// # Arguments
+///
+/// * `linear` - Linear voltage ratio.
 fn linear_to_dbfs(linear: f64) -> f64 {
     20. * (linear / ADC_MAX).log10()
 }
 
-/// Frequency (in Hz) to period in terms of the fast clock period.
+/// Number of fast clock periods in one reference signal period.
+///
+/// # Arguments
+///
+/// * `freq` - Reference frequency (in Hz).
+/// * `ffast` - Fast external clock frequency (in Hz).
 fn freq_to_tcounts(freq: f64, ffast: f64) -> f64 {
     ffast / freq
 }
 
+/// Number of fast clock counts in one ADC sampling period.
+///
+/// # Arguments
+///
+/// * `fadc` - ADC sampling frequency (in Hz).
+/// * `ffast` - Fast clock frequency (in Hz).
 fn adc_counts(fadc: f64, ffast: f64) -> f64 {
     ffast / fadc
 }
 
+/// Convert a real input value in the range `-ADC_MAX` to `+ADC_MAX`
+/// to an equivalent 16-bit ADC sampled value.
+///
+/// # Arguments
+///
+/// * `x` - Real ADC input value.
 fn real_to_adc_sample(x: f64) -> i16 {
     let max: i64 = i16::MAX as i64;
     let min: i64 = i16::MIN as i64;
@@ -63,6 +92,8 @@ fn real_to_adc_sample(x: f64) -> i16 {
 /// * `pure_sigs` - Sinusoidal components of input signal.
 /// * `tstart` - Starting time of input signal in terms of fast clock
 /// counts.
+/// * `ffast` - Fast clock frequency (in Hz).
+/// * `fadc` - ADC sampling frequency (in Hz).
 fn input_signal<const N: usize>(
     pure_sigs: &Vec<PureSine>,
     tstart: u64,
@@ -97,6 +128,20 @@ fn input_signal<const N: usize>(
 
 /// Reference clock timestamp values in `N` ADC periods starting at
 /// `tstart`. Also returns the number of valid timestamps.
+///
+/// # Generics
+///
+/// `M` - Size of the output timestamps array.
+///
+/// # Arguments
+///
+/// * `fref` - External reference signal frequency (in Hz).
+/// * `phi` - External reference signal phase shift (in radians).
+/// * `tstart` - Start time in fast clock counts. This is the
+/// start time of the current processing sequence (i.e., for the
+/// current `N` ADC samples).
+/// * `tstop` - Stop time in fast clock counts.
+/// * `ffast` - Fast clock frequency (in Hz).
 fn tstamps<const M: usize>(
     fref: f64,
     phi: f64,
@@ -124,6 +169,11 @@ fn tstamps<const M: usize>(
 
 /// Lowpass biquad filter using cutoff and sampling frequencies.
 /// Taken from: https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
+///
+/// # Arguments
+///
+/// `fc` - Corner frequency, or 3dB cutoff frequency (in Hz).
+/// `fs` - Sampling frequency (in Hz).
 fn lp_iir_ba(fc: f64, fs: f64) -> [f32; 5] {
     let w0: f64 = 2. * PI * fc / fs;
     let q: f64 = 1. / 2f64.sqrt();
@@ -147,14 +197,61 @@ fn lp_iir_ba(fc: f64, fs: f64) -> [f32; 5] {
 /// value. Setting `reference` to the full scale value gives a full
 /// scale uncertainty. Setting `reference` to `act` uses a percentage
 /// accuracy.
+///
+/// # Arguments
+///
+/// See `max_error`.
+///
+/// * `res` - Result. This is compared with the actual value, `act`.
 fn tol_check(act: f32, res: f32, fixed_tol: f32, rel_tol: f32) -> bool {
     (act - res).abs() < max_error(act, fixed_tol, rel_tol)
 }
 
+/// Maximum error from an actual value given fixed and relative
+/// tolerances.
+///
+/// # Arguments
+///
+/// * `act` - Actual value with respect to which the magnitude of the
+/// relative tolerance is computed.
+/// * `fixed_tol` - Fixed tolerance.
+/// * `rel_tol` - Relative tolerance. `rel_tol` * `act` gives the total
+/// contribution of the relative tolerance.
 fn max_error(act: f32, fixed_tol: f32, rel_tol: f32) -> f32 {
     rel_tol * act.abs() + fixed_tol
 }
 
+/// Lowpass filter test for magnitude and angle computation.
+///
+/// # Generics
+///
+/// * `N` - Number of ADC samples in each processing sequence.
+/// This must be a power of 2.
+/// * `M` - Maximum number of external reference edge timestamps.
+/// The highest this should ever be set is N>>1.
+/// * `K` - Number of output samples. This must be a power of 2 and
+/// between 1 and `N` (inclusive).
+///
+/// # Arguments
+///
+/// * `ffast` - Fast clock frequency (Hz). The fast clock increments
+/// timestamp counter values used to record the edges of the external
+/// reference.
+/// * `fadc` - ADC sampling frequency (in Hz).
+/// * `fref` - External reference frequency (in Hz).
+/// * `fscale` - Scaling factor for the demodulation frequency. For
+/// instance, 2 would demodulate with the first harmonic of the reference
+/// frequency.
+/// * `fc` - Lowpass filter 3dB cutoff frequency.
+/// * `desired_input` - `PureSine` giving the frequency, strength and
+/// phase of the desired result.
+/// * `noise_inputs` - Vector of `PureSine` for any noise inputs on top
+/// of `desired_input`.
+/// * `tau_factor` - Number of time constants after which the output
+/// is considered valid.
+/// * `tol` - Acceptable relative tolerance the magnitude and angle
+/// outputs. The outputs must remain within this tolerance between
+/// `tau_factor` and `tau_factor+1` time constants.
 fn lp_test<const N: usize, const M: usize, const K: usize>(
     ffast: f64,
     fadc: f64,
