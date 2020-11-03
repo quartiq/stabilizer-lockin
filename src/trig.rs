@@ -1,4 +1,5 @@
 use core::f32::consts::PI;
+extern crate libm;
 
 const TRIG_N: usize = 1_000;
 static SIN_TABLE: [f32; TRIG_N] = include!("sin_table.txt");
@@ -11,6 +12,9 @@ static ATAN_TABLE: [f32; TRIG_N] = include!("atan_table.txt");
 /// * `theta` - Angle for which sine is computed. Must be in range
 /// [0,2*PI).
 pub fn sin(theta: f32) -> f32 {
+    // TODO remove for custom implementation
+    return libm::sinf(theta);
+
     let (factor, theta) = restrict_angle(theta);
     let pos = table_pos(theta, PI / 2.);
     let floor = pos as usize;
@@ -44,6 +48,9 @@ pub fn sin_map<const N: usize>(thetas: [f32; N]) -> [f32; N] {
 /// * `theta` - Angle for which cosine is computed. Must be in range
 /// [0,2*PI).
 pub fn cos(theta: f32) -> f32 {
+    // TODO remove for custom implementation
+    return libm::cosf(theta);
+
     let mut theta = theta + (PI / 2.);
     if theta >= 2. * PI {
         theta -= 2. * PI;
@@ -68,6 +75,9 @@ pub fn cos_map<const N: usize>(thetas: [f32; N]) -> [f32; N] {
 /// * `y` - Y coordinate value. Can be any real value.
 /// * `x` - X coordinate value. Can be any real value.
 pub fn atan2(y: f32, x: f32) -> f32 {
+    // TODO remove for custom implementation
+    return libm::atan2f(y, x);
+
     // I believe atan2(0,0) is technically undefined, not =0, but the
     // rust standard library defines it this way.
     if x == 0. && y == 0. {
