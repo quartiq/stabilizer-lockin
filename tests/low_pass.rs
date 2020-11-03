@@ -15,7 +15,7 @@ use stabilizer_lockin::iir::{IIRState, IIR};
 use stabilizer_lockin::{postfilt_at, TimeStamp};
 
 const ADC_MAX: f64 = 1.;
-const ADC_MAX_COUNTS: f64 = i16::MAX as f64;
+const ADC_MAX_COUNTS: f64 = (1 << 15) as f64;
 
 /// Pure sinusoid with a given frequency (in Hz), amplitude (in dBFS)
 /// and phase offset.
@@ -75,14 +75,19 @@ fn real_to_adc_sample(x: f64) -> i16 {
     let max: i64 = i16::MAX as i64;
     let min: i64 = i16::MIN as i64;
 
-    // clip inputs
-    if (x as i64) > max {
-        return i16::MAX;
-    } else if (x as i64) < min {
-        return i16::MIN;
+    let xi: i64 = (x / ADC_MAX * ADC_MAX_COUNTS) as i64;
+
+    // Clip inputs. It's hard to characterize the correct output
+    // result when the inputs are clipped, so panic instead.
+    if xi > max {
+        panic!("Input clipped to maximum, result is unlikely to be correct.");
+    // return i16::MAX;
+    } else if xi < min {
+        panic!("Input clipped to minimum, result is unlikely to be correct.");
+        // return i16::MIN;
     }
 
-    (i16::MAX as f64 * x) as i16
+    xi as i16
 }
 
 /// Generate `N` values of an input signal starting at `tstart`.
@@ -302,8 +307,8 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let iir = IIR {
         ba: lp_iir_ba(fc, fadc),
         y_offset: 0.,
-        y_min: -f32::INFINITY,
-        y_max: f32::INFINITY,
+        y_min: -ADC_MAX_COUNTS as f32,
+        y_max: (ADC_MAX_COUNTS - 1.) as f32,
     };
 
     let iirs: [IIR; 2] = [iir, iir];
