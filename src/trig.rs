@@ -309,16 +309,5 @@ mod tests {
                 );
             }
         }
-
-        // let bounds: [f32; 5] = [-f32::INFINITY, -1., 0., 1., f32::INFINITY];
-        // for ratio in bounds.iter() {
-        //     let res = atan(*ratio);
-        //     let act = ratio.atan();
-        //     assert!((res - act).abs() < tol, "ratio: {}, res: {}, act: {}", ratio, res, act);
-        // }
     }
-
-    // TODO test sin_map
-
-    // TODO test cos_map
 }
