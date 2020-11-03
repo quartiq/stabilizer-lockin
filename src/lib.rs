@@ -110,7 +110,7 @@ pub fn prefilt<const N: usize, const M: usize, const K: usize>(
     fscale: u16,
     tstamps_mem: &mut [TimeStamp; 2],
 ) -> ([f32; K], [f32; K]) {
-    let (i, q) = prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
+    let (i, q) = prefilt_no_decimate!({N}, {M}, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
     decimate::<N, K>(i, q)
 }
 
@@ -134,7 +134,7 @@ pub fn postfilt_iq<const N: usize, const M: usize, const K: usize>(
     iirstate: &mut [iir::IIRState; 2],
     tstamps_mem: &mut [TimeStamp; 2],
 ) -> ([f32; K], [f32; K]) {
-    let (i, q) = prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
+    let (i, q) = prefilt_no_decimate!({N}, {M}, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
     let (ifilt, qfilt) = filter(i, q, iir, iirstate);
     decimate::<N, K>(ifilt, qfilt)
 }
@@ -158,7 +158,7 @@ pub fn postfilt_at<const N: usize, const M: usize, const K: usize>(
 ) -> ([f32; K], [f32; K]) {
     let (i, q) = {
         let (ipre, qpre) =
-            prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
+            prefilt_no_decimate!({N}, {M}, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
         let (ifilt, qfilt) = filter(ipre, qpre, iir, iirstate);
         decimate::<N, K>(ifilt, qfilt)
     };
