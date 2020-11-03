@@ -52,6 +52,25 @@ impl TimeStamp {
     }
 }
 
+macro_rules! prefilt_no_decimate {
+    ( $N:expr, $M:expr, $x:expr, $t:expr, $r:expr, $phi:expr, $ffast:expr, $fadc:expr, $fscale:expr, $tstamps_mem:expr ) => {{
+        record_new_tstamps::<$M>($t, $r, $tstamps_mem);
+        let ts_valid_count = tstamps_valid_count($tstamps_mem);
+
+        if ts_valid_count < 2 {
+            return ([0.; K], [0.; K]);
+        }
+
+        let tadc = tadc($ffast, $fadc);
+        let thetas = adc_phases::<$N>($t[0], $tstamps_mem, $phi, $fscale, tadc);
+        let sines = sin_map::<$N>(thetas);
+        let cosines = cos_map::<$N>(thetas);
+
+        increment_tstamp_sequence($tstamps_mem);
+        demod($x, sines, cosines)
+    }};
+}
+
 /// Unfiltered in-phase and quadrature signals.
 ///
 /// # Generics
@@ -91,22 +110,7 @@ pub fn prefilt<const N: usize, const M: usize, const K: usize>(
     fscale: u16,
     tstamps_mem: &mut [TimeStamp; 2],
 ) -> ([f32; K], [f32; K]) {
-    record_new_tstamps::<M>(t, r, tstamps_mem);
-    let ts_valid_count = tstamps_valid_count(tstamps_mem);
-
-    if ts_valid_count < 2 {
-        return ([0.; K], [0.; K]);
-    }
-
-    let tadc = tadc(ffast, fadc);
-    let thetas = adc_phases::<N>(t[0], tstamps_mem, phi, fscale, tadc);
-    let sines = sin_map::<N>(thetas);
-    let cosines = cos_map::<N>(thetas);
-
-    let (i, q) = demod(x, sines, cosines);
-
-    increment_tstamp_sequence(tstamps_mem);
-
+    let (i, q) = prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
     decimate::<N, K>(i, q)
 }
 
@@ -130,26 +134,9 @@ pub fn postfilt_iq<const N: usize, const M: usize, const K: usize>(
     iirstate: &mut [iir::IIRState; 2],
     tstamps_mem: &mut [TimeStamp; 2],
 ) -> ([f32; K], [f32; K]) {
-    record_new_tstamps::<M>(t, r, tstamps_mem);
-    let ts_valid_count = tstamps_valid_count(tstamps_mem);
-
-    if ts_valid_count < 2 {
-        return ([0.; K], [0.; K]);
-    }
-
-    let tadc = tadc(ffast, fadc);
-    let thetas = adc_phases::<N>(t[0], tstamps_mem, phi, fscale, tadc);
-    let sines = sin_map::<N>(thetas);
-    let cosines = cos_map::<N>(thetas);
-
-    let (i, q) = {
-        let (id, qd) = demod(x, sines, cosines);
-        filter(id, qd, iir, iirstate)
-    };
-
-    increment_tstamp_sequence(tstamps_mem);
-
-    decimate::<N, K>(i, q)
+    let (i, q) = prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
+    let (ifilt, qfilt) = filter(i, q, iir, iirstate);
+    decimate::<N, K>(ifilt, qfilt)
 }
 
 /// Filtered magnitude and angle signals.
@@ -169,23 +156,12 @@ pub fn postfilt_at<const N: usize, const M: usize, const K: usize>(
     iirstate: &mut [iir::IIRState; 2],
     tstamps_mem: &mut [TimeStamp; 2],
 ) -> ([f32; K], [f32; K]) {
-    let (i, q) = postfilt_iq::<N, M, K>(
-        x,
-        t,
-        r,
-        phi,
-        ffast,
-        fadc,
-        fscale,
-        iir,
-        iirstate,
-        tstamps_mem,
-    );
-
-    // TODO it's not ideal that we also checked this in `postfilt_iq`.
-    if tstamps_valid_count(tstamps_mem) < 2 {
-        return ([0.; K], [0.; K]);
-    }
+    let (i, q) = {
+        let (ipre, qpre) =
+            prefilt_no_decimate!(N, M, x, t, r, phi, ffast, fadc, fscale, tstamps_mem);
+        let (ifilt, qfilt) = filter(ipre, qpre, iir, iirstate);
+        decimate::<N, K>(ifilt, qfilt)
+    };
 
     let a = iq_to_a_map::<K>(i, q);
     let t = iq_to_t_map::<K>(i, q);
@@ -704,7 +680,10 @@ mod tests {
 
     #[test]
     fn iq_to_a_test() {
-        assert!(f32_is_close(iq_to_a(1. / 2f32.sqrt(), 1. / 2f32.sqrt()), 2.));
+        assert!(f32_is_close(
+            iq_to_a(1. / 2f32.sqrt(), 1. / 2f32.sqrt()),
+            2.
+        ));
         assert!(f32_is_close(iq_to_a(0.1, 1.6), 3.20624390838));
         assert!(f32_is_close(iq_to_a(-0.1, 1.6), 3.20624390838));
         assert!(f32_is_close(iq_to_a(0.1, -1.6), 3.20624390838));
