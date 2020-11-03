@@ -7,7 +7,7 @@ use std::f64::consts::PI;
 use std::vec::Vec;
 
 use stabilizer_lockin::iir::{IIRState, IIR};
-use stabilizer_lockin::{postfilt_at, TimeStamp};
+use stabilizer_lockin::{postfilt_at, postfilt_iq, TimeStamp};
 
 const ADC_MAX: f64 = 1.;
 const ADC_MAX_COUNTS: f64 = (1 << 15) as f64;
@@ -273,10 +273,11 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let in_dbfs: f64 = desired_input.amp_dbfs;
     let in_a: f64 = dbfs_to_linear(in_dbfs);
     let in_phi: f64 = desired_input.phi;
-    let i = in_a / 2. * in_phi.cos();
-    let q = in_a / 2. * in_phi.sin();
+    let i_act = in_a / 2. * in_phi.cos();
+    let q_act = in_a / 2. * in_phi.sin();
     let mut in_a_noise: f64 = 0.;
     let mut in_phi_noise: f64 = 0.;
+    let mut iq_noise: f64 = 0.;
 
     for noise_input in noise_inputs.iter() {
         // Noise inputs create an oscillation at the output, where the
@@ -286,12 +287,17 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
         let octaves = ((noise_input.freq - (fref * fscale as f64)).abs() / fc).log2();
         let attenuation = -12. * octaves;
         let noise_lin = dbfs_to_linear(noise_input.amp_dbfs + attenuation);
-        in_a_noise += noise_lin;
-        // Noise affects the phase output by creating oscillations to
-        // I and Q, which affects atan2(Q, I).
+        iq_noise += noise_lin;
+        // The maximum amplitude noise contribution can be found with
+        // A=2*sqrt((I+n)**2+(Q+n)**2)-2*sqrt(I**2+Q**2), where n is
+        // the noise amplitude.
+        in_a_noise += (2. * ((i_act + noise_lin).powf(2.) + (q_act + noise_lin).powf(2.)).sqrt()
+            - in_a)
+            .abs();
+        // Output oscillations affect angle noise via atan2(Q, I).
         let phi_err = {
             // TODO I'm not so sure about this...
-            ((q + noise_lin).atan2(i - noise_lin) - q.atan2(i)).abs()
+            ((q_act + noise_lin).atan2(i_act - noise_lin) - q_act.atan2(i_act)).abs()
         };
         in_phi_noise += phi_err;
     }
@@ -300,8 +306,13 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     // sqrt(2) converts the rms value to an amplitude. The frequency
     // ratio limits the noise bandwidth to the cutoff frequency.
     let quantization_noise = lsb / 12_f64.sqrt() * 2_f64.sqrt() * (fc / fadc).sqrt();
-    in_a_noise += quantization_noise;
-    in_phi_noise += ((q + quantization_noise).atan2(i - quantization_noise) - q.atan2(i)).abs();
+    iq_noise += quantization_noise;
+    in_a_noise += (2.
+        * ((i_act + quantization_noise).powf(2.) + (q_act + quantization_noise).powf(2.)).sqrt()
+        - in_a)
+        .abs();
+    in_phi_noise +=
+        ((q_act + quantization_noise).atan2(i_act - quantization_noise) - q_act.atan2(i_act)).abs();
 
     let pure_sigs = noise_inputs;
     pure_sigs.push(desired_input);
@@ -316,7 +327,21 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let iirs: [IIR; 2] = [iir, iir];
     let mut iir_states: [IIRState; 2] = [[0.; 5], [0.; 5]];
 
+    let iirs_iq: [IIR; 2] = [iir, iir];
+    let mut iir_states_iq: [IIRState; 2] = [[0.; 5], [0.; 5]];
+
     let mut timestamps = [
+        TimeStamp {
+            count: 0,
+            sequences_old: -1,
+        },
+        TimeStamp {
+            count: 0,
+            sequences_old: -1,
+        },
+    ];
+
+    let mut timestamps_iq = [
         TimeStamp {
             count: 0,
             sequences_old: -1,
@@ -347,6 +372,19 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
             &mut timestamps,
         );
 
+        let (i, q) = postfilt_iq::<N, M, K>(
+            sig,
+            ts,
+            r,
+            0.,
+            ffast as u32,
+            fadc as u32,
+            fscale,
+            iirs_iq,
+            &mut iir_states_iq,
+            &mut timestamps_iq,
+        );
+
         // Ensure stable below tolerance for 1 time constant after `tau_factor`.
         if n >= n_samples {
             for k in 0..K {
@@ -366,6 +404,23 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
                     in_phi,
                     t[k],
                     max_error(in_phi, in_phi_noise as f32, tol)
+                );
+
+                let i_norm: f32 = i[k] / ADC_MAX_COUNTS as f32;
+                let q_norm: f32 = q[k] / ADC_MAX_COUNTS as f32;
+                assert!(
+                    tol_check(i_act as f32, i_norm, iq_noise as f32, tol),
+                    "i_act: {:.4}, i_meas: {:.4}, tol: {:.4}",
+                    i_act,
+                    i_norm,
+                    max_error(i_act as f32, iq_noise as f32, tol)
+                );
+                assert!(
+                    tol_check(q_act as f32, q_norm, iq_noise as f32, tol),
+                    "i_act: {:.4}, i_meas: {:.4}, tol: {:.4}",
+                    q_act,
+                    q_norm,
+                    max_error(q_act as f32, iq_noise as f32, tol)
                 );
             }
         }
