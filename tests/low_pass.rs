@@ -302,7 +302,8 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     }
 
     let lsb: f64 = 1. / ADC_MAX_COUNTS;
-    // sqrt(2) converts the rms value to an amplitude
+    // sqrt(2) converts the rms value to an amplitude. The frequency
+    // ratio limits the noise bandwidth to the cutoff frequency.
     let quantization_noise = lsb / 12_f64.sqrt() * 2_f64.sqrt() * (fc / fadc).sqrt();
     in_a_noise += quantization_noise;
     in_phi_noise += ((q + quantization_noise).atan2(i - quantization_noise) - q.atan2(i)).abs();
