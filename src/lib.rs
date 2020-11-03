@@ -182,8 +182,10 @@ pub fn postfilt_at<const N: usize, const M: usize, const K: usize>(
         tstamps_mem,
     );
 
-    // TODO we should return here when tstamp valid count < 2. This is
-    // unnecessary processing.
+    // TODO it's not ideal that we also checked this in `postfilt_iq`.
+    if tstamps_valid_count(tstamps_mem) < 2 {
+        return ([0.; K], [0.; K]);
+    }
 
     let a = iq_to_a_map::<K>(i, q);
     let t = iq_to_t_map::<K>(i, q);
