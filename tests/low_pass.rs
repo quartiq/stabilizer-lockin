@@ -278,6 +278,8 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     let in_dbfs: f64 = desired_input.amp_dbfs;
     let in_a: f64 = dbfs_to_linear(in_dbfs);
     let in_phi: f64 = desired_input.phi;
+    let i = in_a / 2. * in_phi.cos();
+    let q = in_a / 2. * in_phi.sin();
     let mut in_a_noise: f64 = 0.;
     let mut in_phi_noise: f64 = 0.;
 
@@ -292,14 +294,18 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
         in_a_noise += noise_lin;
         // Noise affects the phase output by creating oscillations to
         // I and Q, which affects atan2(Q, I).
-        // TODO I'm not so sure about this...
         let phi_err = {
-            let i = in_a / 2. * in_phi.cos();
-            let q = in_a / 2. * in_phi.sin();
+            // TODO I'm not so sure about this...
             ((q + noise_lin).atan2(i - noise_lin) - q.atan2(i)).abs()
         };
         in_phi_noise += phi_err;
     }
+
+    let lsb: f64 = 1. / ADC_MAX_COUNTS;
+    // sqrt(2) converts the rms value to an amplitude
+    let quantization_noise = lsb / 12_f64.sqrt() * 2_f64.sqrt() * (fc / fadc).sqrt();
+    in_a_noise += quantization_noise;
+    in_phi_noise += ((q + quantization_noise).atan2(i - quantization_noise) - q.atan2(i)).abs();
 
     let pure_sigs = noise_inputs;
     pure_sigs.push(desired_input);
@@ -323,8 +329,14 @@ fn lp_test<const N: usize, const M: usize, const K: usize>(
     // };
 
     let mut timestamps = [
-        TimeStamp { count: 0, sequences_old: -1 },
-        TimeStamp { count: 0, sequences_old: -1 }
+        TimeStamp {
+            count: 0,
+            sequences_old: -1,
+        },
+        TimeStamp {
+            count: 0,
+            sequences_old: -1,
+        },
     ];
 
     let in_a: f32 = in_a as f32;
@@ -838,13 +850,11 @@ fn lp_low_t() {
             amp_dbfs: -30.,
             phi: 0.,
         },
-        &mut vec![
-            PureSine {
-                freq: 2. * fdemod,
-                amp_dbfs: -20.,
-                phi: 0.,
-            }
-        ],
+        &mut vec![PureSine {
+            freq: 2. * fdemod,
+            amp_dbfs: -20.,
+            phi: 0.,
+        }],
         tau,
         tol,
     )
@@ -874,7 +884,11 @@ fn lp_very_low_t() {
             amp_dbfs: -30.,
             phi: 0.,
         },
-        &mut Vec::<PureSine>::new(),
+        &mut vec![PureSine {
+            freq: 2. * fdemod,
+            amp_dbfs: -20.,
+            phi: 0.,
+        }],
         tau,
         tol,
     )
