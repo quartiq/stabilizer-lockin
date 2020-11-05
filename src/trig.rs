@@ -162,7 +162,6 @@ fn restrict_angle(theta: f32) -> (f32, f32) {
 // Relative position of `val` with respect to a lookup table's
 // indices. This returns a floating-point value so that we can use
 // this position to interpolate between two existing table values.
-#[inline]
 fn table_pos(val: f32, max: f32) -> f32 {
     (TRIG_N as f32) * val / max
 }
@@ -170,7 +169,6 @@ fn table_pos(val: f32, max: f32) -> f32 {
 // Perform a linear interpolation. pos is the percentage distance from
 // lval (the lower bound) relative to the total distance between lval
 // and uval (the upper bound).
-#[inline]
 fn lin_interp(pos: f32, lval: f32, uval: f32) -> f32 {
     lval + (pos * (uval - lval))
 }
