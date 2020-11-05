@@ -1,9 +1,7 @@
 #![no_std]
-#![feature(core_intrinsics)]
 #![feature(min_const_generics)]
 
 use core::f32::consts::PI;
-use core::intrinsics;
 
 pub mod iir;
 mod trig;
