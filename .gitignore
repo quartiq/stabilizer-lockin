@@ -1,3 +1,4 @@
 /target
 Cargo.lock
-/util/table_gen
+/src/atan_table.txt
+/src/sin_table.txt

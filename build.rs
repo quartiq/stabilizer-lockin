@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 const TABLE_N: usize = 1000;
 
 fn construct_table(fname: String, xvals: [f32; TABLE_N], tr: fn(f32) -> f32) {
-    let path = Path::new("../src").join(fname);
+    let path = Path::new("src").join(fname);
     let display = path.display();
 
     let mut file = match File::create(&path) {
