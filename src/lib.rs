@@ -394,26 +394,14 @@ fn decimate<const N: usize, const K: usize>(i: [f32; N], q: [f32; N]) -> ([f32; 
     let n_sub_k: usize = N / K;
     let mut res_i: [f32; K] = [0.; K];
     let mut res_q: [f32; K] = [0.; K];
-    let mut j: usize = 0;
-    let mut k: usize = 0;
 
-    for n in 0..N {
-        if j == 0 {
-            res_i[k] = i[n];
-            res_q[k] = q[n];
-            k += 1;
-            // Handle no decimation case. TODO there's probably a more
-            // efficient way to do this.
-            if n_sub_k > 1 {
-                j += 1;
-            }
-        } else {
-            if j == n_sub_k - 1 {
-                j = 0;
-            } else {
-                j += 1;
-            }
-        }
+    let mut n: usize = 0;
+    let mut k: usize = 0;
+    while n < N {
+        res_i[k] = i[n];
+        res_q[k] = q[n];
+        k += 1;
+        n += n_sub_k;
     }
 
     (res_i, res_q)
